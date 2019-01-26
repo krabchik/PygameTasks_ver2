@@ -1,7 +1,9 @@
 import pygame, sys, os
 
-# ----------------------------------- You need to enter level name --------------------------------
-level_name = input('Enter name of file with level: ')
+
+level_name = 'lvl.txt'
+if len(sys.argv) > 1:
+    level_name = sys.argv[1]
 pygame.init()
 screen = pygame.display.set_mode((500, 500))
 
@@ -35,6 +37,14 @@ tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 
 
+def load_level(filename):
+    filename = "data/" + filename
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+    max_width = max(map(len, level_map))
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map)), len(level_map), max_width
+
+
 def generate_level(level):
     new_player, x, y = None, None, None
     for y in range(len(level)):
@@ -52,14 +62,6 @@ def generate_level(level):
 def terminate():
     pygame.quit()
     sys.exit()
-
-
-def load_level(filename):
-    filename = "data/" + filename
-    with open(filename, 'r') as mapFile:
-        level_map = [line.strip() for line in mapFile]
-    max_width = max(map(len, level_map))
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
 def start_screen():
@@ -107,7 +109,7 @@ class Player(pygame.sprite.Sprite):
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
     def update(self, x, y):
-        self. rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
+        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
 
 
 running = True
