@@ -11,15 +11,15 @@ class Player(pygame.sprite.Sprite):
         self.image.fill((0, 0, 255))
         self.rect = pygame.Rect(*pos, 20, 20)
 
-    def update(self, event):
+    def update(self, event, left=False):
         if not event:
             self.fall()
         else:
-            self.move(event)
+            self.move(left)
 
     def fall(self):
-        if not pygame.sprite.spritecollideany(self.image, platforms):
-            self.rect.y += 50
+        if not pygame.sprite.spritecollideany(self, platforms):
+            self.rect.y += 2
 
     def move(self, left=False):
         if left:
@@ -39,11 +39,11 @@ class Platform(pygame.sprite.Sprite):
 running = True
 players = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
-
+fps = 25
+clock = pygame.time.Clock()
 while running:
     screen.fill((0, 0, 0))
     for event in pygame.event.get():
-        print(event)
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -56,8 +56,8 @@ while running:
             elif event.key == pygame.K_RIGHT:
                 players.update(1)
     players.update(0)
-
     players.draw(screen)
     platforms.draw(screen)
     pygame.display.flip()
+    clock.tick(fps)
 pygame.quit()
