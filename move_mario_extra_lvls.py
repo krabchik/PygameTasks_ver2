@@ -1,7 +1,8 @@
 import pygame, sys, os
 
-
-level_name = 'lvl.txt'
+# ----------------------------------- You need to enter level name --------------------------------
+# Levels names: lvl.txt, lvl1.txt, lvl2.txt
+level_name = input('Enter name of file with level: ')
 pygame.init()
 screen = pygame.display.set_mode((500, 500))
 
