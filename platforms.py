@@ -9,7 +9,8 @@ class Player(pygame.sprite.Sprite):
         super().__init__(group)
         self.image = pygame.Surface((20, 20))
         self.image.fill((0, 0, 255))
-        self.rect = pygame.Rect(*pos, 20, 20)
+        self.rect = pygame.Rect(0, 0, 20, 20)
+        self.rect.center = pos
 
     def update(self, event, left=False):
         if not event:
@@ -33,7 +34,8 @@ class Platform(pygame.sprite.Sprite):
         super().__init__(group)
         self.image = pygame.Surface((50, 10))
         self.image.fill((128, 128, 128))
-        self.rect = pygame.Rect(*pos, 50, 10)
+        self.rect = pygame.Rect(0, 0, 50, 10)
+        self.rect.center = pos
 
 
 running = True
