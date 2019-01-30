@@ -30,7 +30,6 @@ player_image = load_image('mario.png')
 tile_width = tile_height = 50
 clock = pygame.time.Clock()
 
-player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
@@ -41,7 +40,8 @@ def load_level(filename):
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
     max_width = max(map(len, level_map))
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map)), (max_width * 50, len(level_map) * 50)
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map)), (
+    max_width * 50, len(level_map) * 50)
 
 
 def generate_level(level):
@@ -104,18 +104,35 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x + 15, tile_height * pos_y + 5)
+        self.rect = self.image.get_rect()
+        self.rect.move(tile_width * pos_x + 15, tile_height * pos_y + 5)
 
     def update(self, x, y):
         self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
 
 
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - 250)
+        self.dy = -(target.rect.y + target.rect.h // 2 - 250)
+
+
 running = True
 level, screen_size = load_level(level_name)
-generate_level(level)
-screen = pygame.display.set_mode(screen_size)
+new_player, x, y = generate_level(level)
 start_screen(screen_size)
+camera = Camera()
 while running:
     event = pygame.event.wait()
     if event.type == pygame.QUIT:
@@ -129,6 +146,10 @@ while running:
             player_group.update(-50, 0)
         elif event.key == pygame.K_RIGHT:
             player_group.update(50, 0)
+    camera.update(new_player)
+    # обновляем положение всех спрайтов
+    for sprite in all_sprites:
+        camera.apply(sprite)
     tiles_group.draw(screen)
     player_group.draw(screen)
     pygame.display.flip()
