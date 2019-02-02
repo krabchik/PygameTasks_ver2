@@ -25,6 +25,7 @@ car_sprite = pygame.sprite.Group()
 class Car(pygame.sprite.Sprite):
     img = load_image('car.png')
     img_rev = pygame.transform.flip(img, True, False)
+
     def __init__(self):
         super().__init__(car_sprite)
         self.image = Car.img
@@ -41,6 +42,7 @@ class Car(pygame.sprite.Sprite):
             else:
                 self.image = Car.img
         self.rect.x += self.v
+
 
 Car()
 running = True
