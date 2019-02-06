@@ -2,7 +2,7 @@ import pygame, sys, os
 
 # ----------------------------------- You need to enter level name --------------------------------
 # Levels names: lvl.txt, lvl1.txt, lvl2.txt
-level_name = input('Enter name of file with level: ')
+level_name = sys.argv[-1]
 pygame.init()
 screen = pygame.display.set_mode((500, 500))
 
@@ -40,8 +40,8 @@ def load_level(filename):
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
     max_width = max(map(len, level_map))
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map)), (
-    max_width * 50, len(level_map) * 50)
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map)), \
+           (max_width * 50, len(level_map) * 50)
 
 
 def generate_level(level):
@@ -68,7 +68,7 @@ def start_screen(size_of_screen):
                   "Правила игры",
                   "Если в правилах несколько строк,",
                   "приходится выводить их построчно"]
-    fon = pygame.transform.scale(load_image('fon.jpg'), size_of_screen)
+    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 500))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
     text_coord = 50
@@ -99,13 +99,15 @@ class Tile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
+    def update(self, x, y):
+        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
-        self.rect = self.image.get_rect()
-        self.rect.move(tile_width * pos_x + 15, tile_height * pos_y + 5)
+        self.rect = self.image.get_rect().move(tile_width * pos_x + 15, tile_height * pos_y + 5)
 
     def update(self, x, y):
         self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
@@ -118,14 +120,13 @@ class Camera:
         self.dy = 0
 
     # сдвинуть объект obj на смещение камеры
-    def apply(self, obj):
-        obj.rect.x += self.dx
-        obj.rect.y += self.dy
+    def apply(self):
+        return self.dx, self.dy
 
     # позиционировать камеру на объекте target
     def update(self, target):
-        self.dx = -(target.rect.x + target.rect.w // 2 - 250)
-        self.dy = -(target.rect.y + target.rect.h // 2 - 250)
+        self.dx = -(target.rect.x + target.rect.w - 235)
+        self.dy = -(target.rect.y + target.rect.h - 245)
 
 
 running = True
@@ -147,9 +148,7 @@ while running:
         elif event.key == pygame.K_RIGHT:
             player_group.update(50, 0)
     camera.update(new_player)
-    # обновляем положение всех спрайтов
-    for sprite in all_sprites:
-        camera.apply(sprite)
+    all_sprites.update(camera.dx, camera.dy)
     tiles_group.draw(screen)
     player_group.draw(screen)
     pygame.display.flip()
