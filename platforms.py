@@ -51,6 +51,7 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             platform = Platform(event.pos, platforms)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            players.remove(players)
             player = Player(event.pos, players)
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
