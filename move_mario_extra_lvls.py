@@ -27,7 +27,8 @@ tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (50, 50)),
     'empty': pygame.transform.scale(load_image('grass1.png'), (50, 50)),
     'water': pygame.transform.scale(load_image('water.png'), (50, 50)),
-    'water_tile': pygame.transform.scale(load_image('water.png'), (10, 10))}
+    'water_tile': pygame.Surface()}
+    # 'water_tile': pygame.transform.scale(load_image('water1.jpg'), (10, 10))}
 player_image = load_image('mario.png')
 tile_width = tile_height = 50
 clock = pygame.time.Clock()
@@ -64,9 +65,13 @@ def generate_level(level):
 
 
 def load_side_water():
-    for y in range(-1, int(screen_size[1]) + 1):
-        for x in range(-1, int(screen_size[0]) + 1):
-            SideWater(x, y)
+    ss_x, ss_y = screen_size
+    for x in range(-10, ss_x + 10, 10):
+        SideWater(x, -10)
+        SideWater(x, ss_y)
+    for y in range(-10, ss_y, 10):
+        SideWater(-10, y)
+        SideWater(ss_x, y)
 
 
 def terminate():
@@ -143,7 +148,7 @@ class Camera:
 
 running = True
 level, screen_size = load_level(level_name)
-
+print(screen_size)
 
 class SideWater(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -176,8 +181,8 @@ while running:
     camera.update(new_player)
     all_sprites.update(camera.dx, camera.dy)
     tiles_group.draw(screen)
-    player_group.draw(screen)
     side_water_group.draw(screen)
+    player_group.draw(screen)
     pygame.display.flip()
     clock.tick(FPS)
 pygame.quit()
