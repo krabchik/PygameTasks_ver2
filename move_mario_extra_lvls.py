@@ -24,8 +24,10 @@ def load_image(name, colorkey=None):
 
 FPS = 20
 tile_images = {
-    'wall': load_image('box.png'),
-    'empty': load_image('grass.png')}
+    'wall': pygame.transform.scale(load_image('box.png'), (50, 50)),
+    'empty': pygame.transform.scale(load_image('grass1.png'), (50, 50)),
+    'water': pygame.transform.scale(load_image('water.png'), (50, 50)),
+    'water_tile': pygame.transform.scale(load_image('water.png'), (10, 10))}
 player_image = load_image('mario.png')
 tile_width = tile_height = 50
 clock = pygame.time.Clock()
@@ -33,6 +35,7 @@ clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+side_water_group = pygame.sprite.Group()
 
 
 def load_level(filename):
@@ -52,10 +55,18 @@ def generate_level(level):
                 Tile('empty', x, y)
             elif level[y][x] == '#':
                 Tile('wall', x, y)
+            elif level[y][x] == 'w':
+                Tile('water', x, y)
             elif level[y][x] == '@':
                 Tile('empty', x, y)
                 new_player = Player(x, y)
     return new_player, x, y
+
+
+def load_side_water():
+    for y in range(-1, int(screen_size[1]) + 1):
+        for x in range(-1, int(screen_size[0]) + 1):
+            SideWater(x, y)
 
 
 def terminate():
@@ -93,11 +104,12 @@ def start_screen(size_of_screen):
 
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y):
+    def __init__(self, tile_type, pos_x, pos_y, water=False):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
+
 
     def update(self, x, y):
         self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
@@ -131,26 +143,41 @@ class Camera:
 
 running = True
 level, screen_size = load_level(level_name)
+
+
+class SideWater(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(side_water_group, all_sprites)
+        self.image = tile_images['water_tile']
+        self.rect = self.image.get_rect().move(x, y)
+
+    def update(self, x, y):
+        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
+
+
+load_side_water()
 new_player, x, y = generate_level(level)
 start_screen(screen_size)
 camera = Camera()
 while running:
-    event = pygame.event.wait()
-    if event.type == pygame.QUIT:
-        running = False
-    elif event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_UP:
-            player_group.update(0, -50)
-        elif event.key == pygame.K_DOWN:
-            player_group.update(0, 50)
-        elif event.key == pygame.K_LEFT:
-            player_group.update(-50, 0)
-        elif event.key == pygame.K_RIGHT:
-            player_group.update(50, 0)
+    events = pygame.event.get()
+    for event in events:
+        if event.type == pygame.QUIT:
+            running = False
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_UP]:
+        player_group.update(0, -10)
+    if keys[pygame.K_DOWN]:
+        player_group.update(0, 10)
+    if keys[pygame.K_LEFT]:
+        player_group.update(-10, 0)
+    if keys[pygame.K_RIGHT]:
+        player_group.update(10, 0)
     camera.update(new_player)
     all_sprites.update(camera.dx, camera.dy)
     tiles_group.draw(screen)
     player_group.draw(screen)
+    side_water_group.draw(screen)
     pygame.display.flip()
     clock.tick(FPS)
 pygame.quit()
