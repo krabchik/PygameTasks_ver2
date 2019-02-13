@@ -1,4 +1,4 @@
-import pygame, sys, os
+import pygame, sys, os, math
 
 # ----------------------------------- You need to enter level name --------------------------------
 # Levels names: lvl.txt, lvl1.txt, lvl2.txt
@@ -27,16 +27,24 @@ tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (50, 50)),
     'empty': pygame.transform.scale(load_image('grass1.png'), (50, 50)),
     'water': pygame.transform.scale(load_image('water.png'), (50, 50)),
-    'water_tile': pygame.Surface()}
-    # 'water_tile': pygame.transform.scale(load_image('water1.jpg'), (10, 10))}
+    'water_tile': pygame.transform.scale(load_image('water.png'), (10, 10)),
+    'enemy50': pygame.transform.scale(load_image('enemy50.png'), (50, 50)),
+    'bullet20': pygame.transform.scale(load_image('bullet20.png'), (50, 50))}
 player_image = load_image('mario.png')
 tile_width = tile_height = 50
 clock = pygame.time.Clock()
 
+speeds = {
+    20: 10,
+    30: 5
+}
+
 all_sprites = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 side_water_group = pygame.sprite.Group()
+enemy_proj = pygame.sprite.Group()
 
 
 def load_level(filename):
@@ -61,17 +69,18 @@ def generate_level(level):
             elif level[y][x] == '@':
                 Tile('empty', x, y)
                 new_player = Player(x, y)
+            elif level[y][x] == '5':
+                Enemy(x, y, 50)
     return new_player, x, y
 
 
 def load_side_water():
-    ss_x, ss_y = screen_size
-    for x in range(-10, ss_x + 10, 10):
-        SideWater(x, -10)
-        SideWater(x, ss_y)
-    for y in range(-10, ss_y, 10):
+    for y in range(-10, int(screen_size[1]) + 10, 10):
         SideWater(-10, y)
-        SideWater(ss_x, y)
+        SideWater(screen_size[0], y)
+    for x in range(-10, int(screen_size[0]) + 10, 10):
+        SideWater(x, -10)
+        SideWater(x, screen_size[1])
 
 
 def terminate():
@@ -115,7 +124,6 @@ class Tile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
-
     def update(self, x, y):
         self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
 
@@ -125,6 +133,66 @@ class Player(pygame.sprite.Sprite):
         super().__init__(player_group, all_sprites)
         self.image = player_image
         self.rect = self.image.get_rect().move(tile_width * pos_x + 15, tile_height * pos_y + 5)
+
+        self.hp = 100
+        self.mana = 120
+
+    def update(self, x, y):
+        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y, hp):
+        Tile('empty', x, y)
+        super().__init__(enemy_group, all_sprites)
+        self.image = tile_images['enemy' + str(hp)]
+        self.rect = self.image.get_rect().move(x * tile_width, y * tile_height)
+
+        self.hp = hp
+        if hp == 50:
+            self.att = 20
+        else:
+            self.att = 30
+
+    def update(self, x, y):
+        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
+
+        # ПОЛОСКА С ХП
+
+    def fire(self):
+        if abs(new_player.rect.center[0] - self.rect.center[0]) < 500 and \
+                abs(new_player.rect.center[1] - self.rect.center[1]) < 500:
+            EnemyBullet((self.rect.x, self.rect.y), (new_player.rect.x, new_player.rect.y), 20)
+
+
+class EnemyBullet(pygame.sprite.Sprite):
+    def __init__(self, start_pos, hero_pos, dmg):
+        super().__init__(enemy_proj, all_sprites)
+        self.image = tile_images['bullet' + str(dmg)]
+        self.rect = self.image.get_rect().move(start_pos[0], start_pos[1])
+        self.dmg = dmg
+        self.st_x, self.st_y = start_pos
+        self.hero_x, self.hero_y = hero_pos
+        self.v_x = (hero_pos[0] - start_pos[0]) * speeds[dmg] \
+                   // math.sqrt((start_pos[1] - hero_pos[1])**2 + (start_pos[0] - hero_pos[0])**2)
+        self.v_y = (hero_pos[1] - start_pos[1]) * speeds[dmg] \
+                   // math.sqrt((start_pos[1] - hero_pos[1])**2 + (start_pos[0] - hero_pos[0])**2)
+
+    def update(self, x, y):
+        if abs(self.rect.x - self.st_x) > 500 or abs(self.rect.y - self.st_y) > 500:
+            self.kill()
+
+        self.rect = self.rect.move(self.v_x, self.v_y)
+
+        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
+        print(self.rect.x, self.rect.y)
+
+
+class SideWater(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(side_water_group, all_sprites)
+        self.image = tile_images['water_tile']
+        self.rect = self.image.get_rect().move(x, y)
 
     def update(self, x, y):
         self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
@@ -148,22 +216,15 @@ class Camera:
 
 running = True
 level, screen_size = load_level(level_name)
-print(screen_size)
-
-class SideWater(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__(side_water_group, all_sprites)
-        self.image = tile_images['water_tile']
-        self.rect = self.image.get_rect().move(x, y)
-
-    def update(self, x, y):
-        self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
-
 
 load_side_water()
 new_player, x, y = generate_level(level)
 start_screen(screen_size)
+screen.fill((0, 0, 0))
 camera = Camera()
+
+enemy_shoot = 0
+
 while running:
     events = pygame.event.get()
     for event in events:
@@ -178,11 +239,22 @@ while running:
         player_group.update(-10, 0)
     if keys[pygame.K_RIGHT]:
         player_group.update(10, 0)
+
+    if enemy_shoot == 20:
+        for i in enemy_group:
+            i.fire()
+        enemy_shoot = 0
+
     camera.update(new_player)
     all_sprites.update(camera.dx, camera.dy)
     tiles_group.draw(screen)
     side_water_group.draw(screen)
+    enemy_group.draw(screen)
+    enemy_proj.draw(screen)
     player_group.draw(screen)
+
+    enemy_shoot += 1
+
     pygame.display.flip()
     clock.tick(FPS)
 pygame.quit()
