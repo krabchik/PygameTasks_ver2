@@ -2,7 +2,7 @@ import pygame, sys, os, math
 
 # ----------------------------------- You need to enter level name --------------------------------
 # Levels names: lvl.txt, lvl1.txt, lvl2.txt
-level_name = 'lvl.txt'
+basic_level_name = 'lvl.txt'
 pygame.init()
 screen = pygame.display.set_mode((500, 500))
 
@@ -38,7 +38,7 @@ def load_level(filename):
     return ready_map
 
 
-FPS = 20
+new_player = None
 tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (50, 50)),
     'empty': pygame.transform.scale(load_image('grass1.png'), (50, 50)),
@@ -47,7 +47,16 @@ tile_images = {
     'enemy50': pygame.transform.scale(load_image('enemy50.png'), (50, 50)),
     'bullet10': pygame.transform.scale(load_image('bullet10.png'), (50, 50)),
     'hero_bullet': pygame.transform.scale(load_image('hero_bullet.png'), (50, 50))}
-player_image = pygame.transform.scale(load_image('hero.png', colorkey=(255, 255, 255)), (50, 50))
+player_images = {
+    'down':   pygame.transform.scale(load_image('mage4.png', colorkey=(255, 255, 255)), (50, 50)),
+    'up':     pygame.transform.scale(load_image('mage3.png', colorkey=(255, 255, 255)), (50, 50)),
+    'left':   pygame.transform.scale(load_image('mage2.png', colorkey=(255, 255, 255)), (50, 50)),
+    'right':  pygame.transform.scale(load_image('mage1.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepdown':   pygame.transform.scale(load_image('stepmage4.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepup':     pygame.transform.scale(load_image('stepmage3.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepleft':   pygame.transform.scale(load_image('stepmage2.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepright':  pygame.transform.scale(load_image('stepmage1.png', colorkey=(255, 255, 255)), (50, 50))
+}
 tile_width = tile_height = 50
 clock = pygame.time.Clock()
 hero_damage = 10
@@ -66,20 +75,9 @@ enemy_proj = pygame.sprite.Group()
 hero_proj = pygame.sprite.Group()
 hp_bars = pygame.sprite.Group()
 
-playerMask = {
-    1: pygame.mask.from_surface(load_image('mario.png'))  # ,
-    # 2: ,
-    # 3: ,
-    # 4:
-}
-enemy_shoot20Mask = pygame.mask.from_surface(load_image('enemy50.png'))
-
-running = True
-level, screen_size = load_level(level_name)
-
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y, water=False):
+    def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(
@@ -92,9 +90,11 @@ class Tile(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y, hp_bar):
         super().__init__(player_group, all_sprites)
-        self.image = player_image
+        self.image = player_images['down']
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
 
+        self.image_name = 'down'
+        self.die = False
         self.hp_bar = hp_bar
         self.hp = 100
         self.mana = 120
@@ -104,20 +104,27 @@ class Player(pygame.sprite.Sprite):
         try:
             self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
             if pygame.sprite.groupcollide(player_group, side_water_group, False, False):
-                a = 0/0
-                print(1)
+                raise ZeroDivisionError
         except ZeroDivisionError:
             self.rect = curr_rect
+        if step > 10:
+            self.image = player_images['step' + self.image_name]
+            return
+        self.image = player_images[self.image_name]
 
     def fire(self, cursor_pos):
-        HeroBullet((self.rect.center[0] - 25, self.rect[1]), cursor_pos, 20)
+        HeroBullet((self.rect.center[0] - 50, self.rect[1]), cursor_pos, 20)
 
     def hit(self, dmg):
         self.hp -= dmg
-        if self.hp == 0:
+        if self.hp <= 0:
             self.kill()
+            self.die = True
 
         self.hp_bar.low(dmg)
+
+    def turn_to(self, direct):
+        self.image_name = direct
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -200,9 +207,6 @@ def generate_level(level):
     return new_player, x, y
 
 
-new_player, x, y = generate_level(level)
-
-
 def load_side_water():
     for y in range(-10, int(screen_size[1]) + 10, 10):
         SideWater(-10, y)
@@ -217,7 +221,36 @@ def terminate():
     sys.exit()
 
 
-def start_screen(size_of_screen):
+def start_screen():
+    intro_text = ["ЗАСТАВКА", "",
+                  "Правила игры",
+                  "Если в правилах несколько строк,",
+                  "приходится выводить их построчно"]
+    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 500))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN or \
+                    event.type == pygame.MOUSEBUTTONDOWN:
+                return  # начинаем игру
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def end_screen():
     intro_text = ["ЗАСТАВКА", "",
                   "Правила игры",
                   "Если в правилах несколько строк,",
@@ -331,57 +364,89 @@ class Camera:
         self.dy = -(target.rect.y + target.rect.h - 245)
 
 
-load_side_water()
-start_screen(screen_size)
-screen.fill((0, 0, 0))
-camera = Camera()
-ch_x, ch_y = 0, 0
-
-enemy_shoot = 0
-hero_shoot = 10
+# Possible statuses:
+# 0 - start screen, 1 - menu, 2 - game preparings, 3 - game, 4 - end screen
+status = 0
+running = True
+FPS = 10
 
 while running:
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.QUIT:
-            running = False
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_UP] or keys[pygame.K_w]:
-        player_group.update(0, -10)
-        ch_y -= 10
-    if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-        player_group.update(0, 10)
-        ch_y += 10
-    if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-        player_group.update(-10, 0)
-        ch_x -= 10
-    if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-        player_group.update(10, 0)
-        ch_x += 10
-    if pygame.mouse.get_pressed()[0]:
-        if hero_shoot == 15:
-            new_player.fire(pygame.mouse.get_pos())
-            hero_shoot = 0
+    if not status:
+        FPS = 10
+        start_screen()
+        status = 2
+    elif status == 2:
+        level, screen_size = load_level(basic_level_name)
+        new_player, x, y = generate_level(level)
+        load_side_water()
+        screen.fill((0, 0, 0))
+        camera = Camera()
+        ch_x, ch_y = 0, 0
 
-    if enemy_shoot == 20:
-        for i in enemy_group:
-            i.fire()
         enemy_shoot = 0
+        hero_shoot = 10
+        step = 0
 
-    camera.update(new_player)
-    all_sprites.update(camera.dx, camera.dy)
-    tiles_group.draw(screen)
-    side_water_group.draw(screen)
-    enemy_group.draw(screen)
-    enemy_proj.draw(screen)
-    player_group.draw(screen)
-    hero_proj.draw(screen)
-    hp_bars.draw(screen)
+        status = 3
 
-    if hero_shoot < 15:
-        hero_shoot += 1
-    enemy_shoot += 1
+    elif status == 3:
+        if new_player.die:
+            status = 4
+            continue
+        FPS = 20
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                running = False
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            player_group.update(0, -10)
+            new_player.turn_to('up')
+            ch_y -= 10
+            step += 1
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            player_group.update(0, 10)
+            new_player.turn_to('down')
+            ch_y += 10
+            step += 1
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            player_group.update(-10, 0)
+            new_player.turn_to('left')
+            ch_x -= 10
+            step += 1
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            player_group.update(10, 0)
+            new_player.turn_to('right')
+            ch_x += 10
+            step += 1
+        if pygame.mouse.get_pressed()[0]:
+            if hero_shoot == 15:
+                new_player.fire(pygame.mouse.get_pos())
+                hero_shoot = 0
 
-    pygame.display.flip()
-    clock.tick(FPS)
-pygame.quit()
+        if enemy_shoot == 20:
+            for i in enemy_group:
+                i.fire()
+            enemy_shoot = 0
+
+        camera.update(new_player)
+        all_sprites.update(camera.dx, camera.dy)
+        tiles_group.draw(screen)
+        side_water_group.draw(screen)
+        enemy_group.draw(screen)
+        enemy_proj.draw(screen)
+        player_group.draw(screen)
+        hero_proj.draw(screen)
+        hp_bars.draw(screen)
+
+        if hero_shoot < 15:
+            hero_shoot += 1
+        enemy_shoot += 1
+
+        pygame.display.flip()
+        clock.tick(FPS)
+        step %= 20
+    elif status == 4:
+        pass
+        #  game_over()
+terminate()
