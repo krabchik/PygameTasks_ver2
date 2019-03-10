@@ -74,6 +74,7 @@ side_water_group = pygame.sprite.Group()
 enemy_proj = pygame.sprite.Group()
 hero_proj = pygame.sprite.Group()
 hp_bars = pygame.sprite.Group()
+button_group = pygame.sprite.Group()
 
 
 class Tile(pygame.sprite.Sprite):
@@ -107,7 +108,7 @@ class Player(pygame.sprite.Sprite):
                 raise ZeroDivisionError
         except ZeroDivisionError:
             self.rect = curr_rect
-        if step > 10:
+        if step > 5:
             self.image = player_images['step' + self.image_name]
             return
         self.image = player_images[self.image_name]
@@ -250,33 +251,49 @@ def start_screen():
         clock.tick(FPS)
 
 
-def end_screen():
-    intro_text = ["ЗАСТАВКА", "",
-                  "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
-    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 500))
-    screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 30)
-    text_coord = 50
-    for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-        screen.blit(string_rendered, intro_rect)
+def die_screen():
+    screen.fill((0, 0, 0))
+    buttons = [Button((400, 450), (100, 50), 'MENU', 0)]
+    FPS = 10
+    running = True
 
-    while True:
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
+                running = False
+                break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                result = None
+                pos = event.pos
+                for button in buttons:
+                    is_on_click = button.onclick(pos)
+                    if is_on_click != -10:
+                        result = is_on_click
+                        running = False
+                        break
+        button_group.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
+    return result
+
+
+class Button(pygame.sprite.Sprite):
+    def __init__(self, coords, size, text, to_return):
+        super().__init__(button_group)
+        self.image = pygame.Surface(size)
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect().move(coords)
+        self.to_return = to_return
+        font = pygame.font.Font(None, 50)
+        string_rendered = font.render(text, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        self.image.blit(string_rendered, pygame.Rect((0, 0), size))
+
+    def onclick(self, pos):
+        if self.rect.collidepoint(pos):
+            return self.to_return
+        return -10
 
 
 class EnemyBullet(pygame.sprite.Sprite):
@@ -445,8 +462,11 @@ while running:
 
         pygame.display.flip()
         clock.tick(FPS)
-        step %= 20
+        step %= 10
     elif status == 4:
-        pass
-        #  game_over()
+        for i in all_sprites:
+            i.kill()
+        status = die_screen()
+        if status == -1:
+            terminate()
 terminate()
