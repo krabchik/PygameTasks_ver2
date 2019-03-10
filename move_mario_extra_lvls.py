@@ -41,7 +41,7 @@ def load_level(filename):
 new_player = None
 tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (50, 50)),
-    'empty': pygame.transform.scale(load_image('grass1.png'), (50, 50)),
+    'empty': pygame.transform.scale(load_image('floor.jpg'), (50, 50)),
     'water': pygame.transform.scale(load_image('water.png'), (50, 50)),
     'water_tile': pygame.transform.scale(load_image('water.png'), (10, 10)),
     'enemy50': pygame.transform.scale(load_image('enemy50.png'), (50, 50)),
@@ -121,7 +121,7 @@ class Player(pygame.sprite.Sprite):
         if self.hp <= 0:
             self.kill()
             self.die = True
-
+            return
         self.hp_bar.low(dmg)
 
     def turn_to(self, direct):
@@ -154,7 +154,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def hit(self, dmg):
         self.hp -= dmg
-        if self.hp == 0:
+        if self.hp <= 0:
             self.kill()
 
         self.hp_bar.low(dmg)
@@ -252,17 +252,20 @@ def start_screen():
 
 
 def die_screen():
-    screen.fill((0, 0, 0))
-    buttons = [Button((400, 450), (100, 50), 'MENU', 0)]
+    screen.fill((255, 255, 255))
+    buttons = [Button((380, 450), (90, 45), 'MENU', 0),
+               Button((180, 450), (160, 45), 'TRY AGAIN', 2)
+               ]
     FPS = 10
     running = True
+    result = None
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
                 running = False
-                break
+                return
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 result = None
                 pos = event.pos
@@ -285,10 +288,11 @@ class Button(pygame.sprite.Sprite):
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect().move(coords)
         self.to_return = to_return
-        font = pygame.font.Font(None, 50)
+        font = pygame.font.Font(None, 35)
         string_rendered = font.render(text, 1, pygame.Color('black'))
         intro_rect = string_rendered.get_rect()
-        self.image.blit(string_rendered, pygame.Rect((0, 0), size))
+        self.image.blit(string_rendered, pygame.Rect((10, 10), size))
+        pygame.draw.rect(self.image, (0, 0, 0), ((0, 0), size), 5)
 
     def onclick(self, pos):
         if self.rect.collidepoint(pos):
