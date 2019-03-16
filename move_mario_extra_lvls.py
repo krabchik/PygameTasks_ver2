@@ -41,21 +41,21 @@ def load_level(filename):
 new_player = None
 tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (50, 50)),
-    'empty': pygame.transform.scale(load_image('floor.jpg'), (50, 50)),
+    'empty': pygame.transform.scale(load_image('floor1.jpg'), (50, 50)),
     'water': pygame.transform.scale(load_image('water.png'), (50, 50)),
     'water_tile': pygame.transform.scale(load_image('water.png'), (10, 10)),
     'enemy50': pygame.transform.scale(load_image('enemy50.png'), (50, 50)),
     'bullet10': pygame.transform.scale(load_image('bullet10.png'), (50, 50)),
     'hero_bullet': pygame.transform.scale(load_image('hero_bullet.png'), (50, 50))}
 player_images = {
-    'down':   pygame.transform.scale(load_image('mage4.png', colorkey=(255, 255, 255)), (50, 50)),
-    'up':     pygame.transform.scale(load_image('mage3.png', colorkey=(255, 255, 255)), (50, 50)),
-    'left':   pygame.transform.scale(load_image('mage2.png', colorkey=(255, 255, 255)), (50, 50)),
-    'right':  pygame.transform.scale(load_image('mage1.png', colorkey=(255, 255, 255)), (50, 50)),
-    'stepdown':   pygame.transform.scale(load_image('stepmage4.png', colorkey=(255, 255, 255)), (50, 50)),
-    'stepup':     pygame.transform.scale(load_image('stepmage3.png', colorkey=(255, 255, 255)), (50, 50)),
-    'stepleft':   pygame.transform.scale(load_image('stepmage2.png', colorkey=(255, 255, 255)), (50, 50)),
-    'stepright':  pygame.transform.scale(load_image('stepmage1.png', colorkey=(255, 255, 255)), (50, 50))
+    'down': pygame.transform.scale(load_image('mage4.png', colorkey=(255, 255, 255)), (50, 50)),
+    'up': pygame.transform.scale(load_image('mage3.png', colorkey=(255, 255, 255)), (50, 50)),
+    'left': pygame.transform.scale(load_image('mage2.png', colorkey=(255, 255, 255)), (50, 50)),
+    'right': pygame.transform.scale(load_image('mage1.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepdown': pygame.transform.scale(load_image('stepmage4.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepup': pygame.transform.scale(load_image('stepmage3.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepleft': pygame.transform.scale(load_image('stepmage2.png', colorkey=(255, 255, 255)), (50, 50)),
+    'stepright': pygame.transform.scale(load_image('stepmage1.png', colorkey=(255, 255, 255)), (50, 50))
 }
 tile_width = tile_height = 50
 clock = pygame.time.Clock()
@@ -75,11 +75,15 @@ enemy_proj = pygame.sprite.Group()
 hero_proj = pygame.sprite.Group()
 hp_bars = pygame.sprite.Group()
 button_group = pygame.sprite.Group()
+water_group = pygame.sprite.Group()
 
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites)
+        if tile_type == 'water':
+            super().__init__(tiles_group, all_sprites, water_group)
+        else:
+            super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
@@ -106,6 +110,8 @@ class Player(pygame.sprite.Sprite):
             self.rect = self.image.get_rect().move(self.rect.x + x, self.rect.y + y)
             if pygame.sprite.groupcollide(player_group, side_water_group, False, False):
                 raise ZeroDivisionError
+            if pygame.sprite.groupcollide(player_group, water_group, False, False):
+                raise ZeroDivisionError
         except ZeroDivisionError:
             self.rect = curr_rect
         if step > 5:
@@ -114,11 +120,12 @@ class Player(pygame.sprite.Sprite):
         self.image = player_images[self.image_name]
 
     def fire(self, cursor_pos):
-        HeroBullet((self.rect.center[0] - 50, self.rect[1]), cursor_pos, 20)
+        HeroBullet((self.rect.center[0] - 50, self.rect[1]), cursor_pos)
 
     def hit(self, dmg):
         self.hp -= dmg
         if self.hp <= 0:
+            self.hp_bar.kill()
             self.kill()
             self.die = True
             return
@@ -155,6 +162,7 @@ class Enemy(pygame.sprite.Sprite):
     def hit(self, dmg):
         self.hp -= dmg
         if self.hp <= 0:
+            self.hp_bar.kill()
             self.kill()
 
         self.hp_bar.low(dmg)
@@ -246,19 +254,73 @@ def start_screen():
                 terminate()
             elif event.type == pygame.KEYDOWN or \
                     event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
+                return
         pygame.display.flip()
         clock.tick(FPS)
 
 
-def die_screen():
+def menu_screen():
+    button_group.empty()
     screen.fill((255, 255, 255))
-    buttons = [Button((380, 450), (90, 45), 'MENU', 0),
-               Button((180, 450), (160, 45), 'TRY AGAIN', 2)
+    buttons = [Button((175, 150), (150, 100), 'LEVELS', 'b_lvls'),
+               Button((175, 350), (150, 100), 'LOAD LEVEL', 'p_lvls')
+               ]
+
+    FPS = 10
+    running = True
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+                running = False
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pos = event.pos
+                for button in buttons:
+                    is_on_click = button.onclick(pos)
+                    if is_on_click != -10:
+                        return button.to_return
+        button_group.draw(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def b_lvls_screen():
+    button_group.empty()
+    screen.fill((255, 255, 255))
+    buttons = [Button((380, 450), (90, 45), 'MENU', 'menu'),
+               Button((225, 100), (50, 50), '1', 'g_prep'),
+               Button((225, 200), (50, 50), '2', 'g_prep'),
+               Button((225, 300), (50, 50), '3', 'g_prep')
                ]
     FPS = 10
     running = True
-    result = None
+
+    pygame.display.flip()
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pos = event.pos
+                for button in buttons:
+                    is_on_click = button.onclick(pos)
+                    if is_on_click != -10:
+                        return button.to_return
+        button_group.draw(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+def die_screen():
+    button_group.empty()
+    screen.fill((255, 255, 255))
+    buttons = [Button((380, 450), (90, 45), 'MENU', 'menu'),
+               Button((180, 450), (160, 45), 'TRY AGAIN', 'g_prep')
+               ]
+    FPS = 10
+    running = True
 
     while running:
         for event in pygame.event.get():
@@ -272,13 +334,10 @@ def die_screen():
                 for button in buttons:
                     is_on_click = button.onclick(pos)
                     if is_on_click != -10:
-                        result = is_on_click
-                        running = False
-                        break
+                        return button.to_return
         button_group.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
-    return result
 
 
 class Button(pygame.sprite.Sprite):
@@ -290,7 +349,6 @@ class Button(pygame.sprite.Sprite):
         self.to_return = to_return
         font = pygame.font.Font(None, 35)
         string_rendered = font.render(text, 1, pygame.Color('black'))
-        intro_rect = string_rendered.get_rect()
         self.image.blit(string_rendered, pygame.Rect((10, 10), size))
         pygame.draw.rect(self.image, (0, 0, 0), ((0, 0), size), 5)
 
@@ -329,17 +387,18 @@ class EnemyBullet(pygame.sprite.Sprite):
 
 
 class HeroBullet(pygame.sprite.Sprite):
-    def __init__(self, start_pos, cursor_pos, dmg):
+    def __init__(self, start_pos, cursor_pos):
         super().__init__(hero_proj, all_sprites)
         self.image = tile_images['hero_bullet']
+        start_pos = [i + 15 for i in start_pos]
         self.rect = self.image.get_rect().move(start_pos[0], start_pos[1])
         self.dmg = hero_damage
         self.st_x, self.st_y = start_pos
         self.hero_x, self.hero_y = cursor_pos
         try:
-            self.v_x = (cursor_pos[0] - start_pos[0]) * 15 \
+            self.v_x = (cursor_pos[0] - start_pos[0]) * 20 \
                        // math.sqrt((start_pos[1] - cursor_pos[1]) ** 2 + (start_pos[0] - cursor_pos[0]) ** 2)
-            self.v_y = (cursor_pos[1] - start_pos[1]) * 15 \
+            self.v_y = (cursor_pos[1] - start_pos[1]) * 20 \
                        // math.sqrt((start_pos[1] - cursor_pos[1]) ** 2 + (start_pos[0] - cursor_pos[0]) ** 2)
         except ZeroDivisionError:
             self.kill()
@@ -386,17 +445,27 @@ class Camera:
 
 
 # Possible statuses:
-# 0 - start screen, 1 - menu, 2 - game preparings, 3 - game, 4 - end screen
-status = 0
+# st_scr - start_screen, menu, b_lvls - base levels, p_lvls - player levels,
+# g_end - end of game, g_prep - game prepairings, g - game
+status = 'st_scr'
 running = True
 FPS = 10
+step = 0
+ch_x, ch_y = 0, 0
+moved = 0
+camera = None
+enemy_shoot = 0
+hero_shoot = 0
 
 while running:
-    if not status:
-        FPS = 10
+    if status == 'st_scr':
         start_screen()
-        status = 2
-    elif status == 2:
+        status = 'menu'
+    elif status == 'menu':
+        status = menu_screen()
+    elif status == 'b_lvls':
+        status = b_lvls_screen()
+    elif status == 'g_prep':
         level, screen_size = load_level(basic_level_name)
         new_player, x, y = generate_level(level)
         load_side_water()
@@ -408,11 +477,11 @@ while running:
         hero_shoot = 10
         step = 0
 
-        status = 3
+        status = 'g'
 
-    elif status == 3:
+    elif status == 'g':
         if new_player.die:
-            status = 4
+            status = 'g_end'
             continue
         FPS = 20
         events = pygame.event.get()
@@ -424,22 +493,22 @@ while running:
             player_group.update(0, -10)
             new_player.turn_to('up')
             ch_y -= 10
-            step += 1
+            moved = 1
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             player_group.update(0, 10)
             new_player.turn_to('down')
             ch_y += 10
-            step += 1
+            moved = 1
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             player_group.update(-10, 0)
             new_player.turn_to('left')
             ch_x -= 10
-            step += 1
+            moved = 1
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             player_group.update(10, 0)
             new_player.turn_to('right')
             ch_x += 10
-            step += 1
+            moved = 1
         if pygame.mouse.get_pressed()[0]:
             if hero_shoot == 15:
                 new_player.fire(pygame.mouse.get_pos())
@@ -449,6 +518,9 @@ while running:
             for i in enemy_group:
                 i.fire()
             enemy_shoot = 0
+
+        if moved:
+            step += 1
 
         camera.update(new_player)
         all_sprites.update(camera.dx, camera.dy)
@@ -467,10 +539,11 @@ while running:
         pygame.display.flip()
         clock.tick(FPS)
         step %= 10
-    elif status == 4:
+        moved = 0
+    elif status == 'g_end':
         for i in all_sprites:
             i.kill()
         status = die_screen()
-        if status == -1:
+        if status == '':
             terminate()
 terminate()
